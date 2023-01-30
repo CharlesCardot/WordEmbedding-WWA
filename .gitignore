@@ -1,0 +1,9 @@
+.ipynb_checkpoints
+*.pyo
+*.pyc
+*.mp4
+*.mp3
+*.wav
+*.jpg
+*.png
+__pycache__/
