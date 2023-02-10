@@ -9,7 +9,8 @@ import pytesseract
 from pdf2image import convert_from_path
 from PIL import Image
  
-
+import re
+import os
  
 def pdftotxt(pdf_filename, out_txt_filename, progress_updates = False):
     
@@ -130,3 +131,11 @@ def pdftotxt(pdf_filename, out_txt_filename, progress_updates = False):
 
         if progress_updates:
             print("Finished OCR on JPEG")
+
+def contains_year(string, year_min, year_max):
+    year_pattern = f"([{year_min}-{year_max}])"
+    match = re.search(year_pattern, string)
+    if match:
+        return True
+    else:
+        return False
