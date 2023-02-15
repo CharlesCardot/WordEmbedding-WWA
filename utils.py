@@ -11,7 +11,11 @@ from PIL import Image
  
 import re
 import os
- 
+
+import spacy
+
+CONTENT_LEGNTH_BUFFER = 8 # Assume content is at least 8 lines
+
 def pdftotxt(pdf_filename, out_txt_filename, progress_updates = False):
     
     if platform.system() == "Windows":
@@ -139,3 +143,58 @@ def contains_year(string, year_min, year_max):
         return True
     else:
         return False
+    
+def chunk_parse_namebased(chunk):
+    
+    nlp = spacy.load("en_core_web_sm")
+    
+    for key, line in enumerate(chunk[:-1]):
+        
+        # Fixes M.M.Mulokozi -> M. M. Mulokozi
+        # MM.Mulokozi -> M. M. Mulokozi
+        if chunk[key-1] == "\n" and chunk[key+1] == "\n":
+            
+            line = [i.strip() for i in line.split(".")]
+            if len(line) >= 3:
+                line = ". ".join(line)
+            elif len(line) == 1:
+                line = line[0]
+            elif len(line) == 2:
+                if len(line[0]) > 3 and len(line[1]) > 3:
+                    line = ". ".join(line)
+                else:
+                    for i in range(len(line)):
+                        if len(line[i]) < 3 and i < len(line)-1:
+                            line[i] = "".join([x + ". " for x in line[i]])
+                    line = " ".join(line)
+            
+
+        # Detects split based on foreward named sign-off
+        doc = nlp(line)
+        contains_person_name = False
+        for entity in doc.ents:
+            
+            if entity.label_ == "PERSON":
+                contains_person_name = True
+    
+        if chunk[key-1] == "\n" and chunk[key+1] == "\n":
+            if contains_person_name and key < len(chunk) - CONTENT_LEGNTH_BUFFER:
+                chunk_foreward = chunk[:key+1]
+                chunk_content = chunk[key+1:]
+                return chunk_foreward, chunk_content
+    
+    return "FAILURE", "FAILURE"
+
+def chunk_parse_newlinebased(chunk):
+    
+    for key, line in enumerate(chunk[:-1]):
+        if "\n" in line and len(line < 6):
+            chunk[key] = "\n"
+    
+    for key, line in enumerate(chunk[2:-1*CONTENT_LEGNTH_BUFFER]):
+        if chunk[key-1] == "\n" and chunk[key] == "\n" and chunk[key+1] == "\n":
+            chunk_foreward = chunk[:key+1]
+            chunk_content = chunk[key+1:]
+            return chunk_foreward, chunk_content
+    
+    return "FAILURE", "FAILURE"
