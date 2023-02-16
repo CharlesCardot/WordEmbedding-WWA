@@ -4,7 +4,10 @@
 import platform
 from tempfile import TemporaryDirectory
 from pathlib import Path
- 
+
+import numpy as np
+import pandas as pd 
+
 import pytesseract
 from pdf2image import convert_from_path
 from PIL import Image
@@ -143,7 +146,28 @@ def contains_year(string, year_min, year_max):
         return True
     else:
         return False
-    
+
+def header_parse(header_group):
+    ## Addressing each format individually,
+    ## this is messy but works most of the time
+    arr = [0 if i == "\n" else 1 for i in header_group]
+    simple_formats = [
+        [1,0,1,1,0,1], [1,0,1,0,1,1], [1,0,1,1,1,0], [1,0,1,0,1,0]
+    ]
+    # Most Common
+    if np.sum(arr[0:3]) == 3:
+        return header_group[0:3]
+    # Simple Formats
+    elif any(arr == i for i in simple_formats):
+        return [header_group[i] for i in range(len(arr)) if arr[i]==1]
+    # More Complex Formats
+    elif arr == [1,0,1,1,1,1]: 
+        return [header_group[0], header_group[2], header_group[3]]
+    elif arr == [1,1,0,1,1,0]: 
+        return [header_group[0], header_group[1], header_group[3], header_group[4]]
+    else:
+        return header_group
+
 def chunk_parse_namebased(chunk):
     
     nlp = spacy.load("en_core_web_sm")
@@ -183,13 +207,9 @@ def chunk_parse_namebased(chunk):
                 chunk_content = chunk[key+1:]
                 return chunk_foreward, chunk_content
     
-    return "FAILURE", "FAILURE"
+    return "FAILURE_namebased", "FAILURE_namebased"
 
 def chunk_parse_newlinebased(chunk):
-    
-    for key, line in enumerate(chunk[:-1]):
-        if "\n" in line and len(line < 6):
-            chunk[key] = "\n"
     
     for key, line in enumerate(chunk[2:-1*CONTENT_LEGNTH_BUFFER]):
         if chunk[key-1] == "\n" and chunk[key] == "\n" and chunk[key+1] == "\n":
@@ -197,4 +217,4 @@ def chunk_parse_newlinebased(chunk):
             chunk_content = chunk[key+1:]
             return chunk_foreward, chunk_content
     
-    return "FAILURE", "FAILURE"
+    return "FAILURE_newlinebased", "FAILURE_newlinebased"
