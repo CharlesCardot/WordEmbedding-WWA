@@ -218,3 +218,49 @@ def chunk_parse_newlinebased(chunk):
             return chunk_foreward, chunk_content
     
     return "FAILURE_newlinebased", "FAILURE_newlinebased"
+
+def chunk_simpleclean(chunk):
+    """
+    This does its best to remove all simple and common issues 
+    and non-ideal text from the chunks. We'll use a combination
+    of regex expressions, external packages (spellchecking),
+    and common sense. This tries to catch general errors
+    and leaves more pointed and specific error catching to
+    other functions.
+
+    Parameters
+    ----------
+
+        chunk : list
+        List of strings to be cleaned
+
+    """
+
+    from textblob import TextBlob
+
+    for key, text in enumerate(chunk):
+
+        text = re.sub(r'\n', ' ', text)  # Remove newline characters
+        text = re.sub(r'  +', ' ', text)  # Remove double spaces
+        if re.search(r"[^A-Za-z0-9\s\.\?\!,;:-–—'\"()\[\]\/\\]+", text):
+            print(text) # May need to worry about \‘\’\“\”\
+        text = re.sub(r"[^A-Za-z0-9\s\.\?\!,;:\-–—'\"()\[\]\/\\]+", '', text)  # Remove non-alphanumeric characters
+        text = text.strip()  # Remove leading and trailing whitespace
+
+        text_blob = TextBlob(text)
+        text = str(text_blob.correct())
+
+        chunk[key] = text
+    
+    return chunk
+
+def chunk_fixcommonOCR(chunk):
+
+    for key, text in enumerate(chunk):
+
+        pattern = r'(?<!\d)([1lI])(?!\d)' # Should fix common issue with I's
+        def replace(match):
+            return {'1': 'I', 'l': 'I', 'I': 'I'}[match.group(1)]
+        text = re.sub(pattern, replace, text)
+
+    return chunk
